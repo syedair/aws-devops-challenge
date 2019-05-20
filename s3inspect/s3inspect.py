@@ -1,11 +1,17 @@
 import uuid
 import boto3
+from datetime import datetime
+from dateutil.tz import tzutc
+
 
 class S3Inspect():
 
-    def __init__(self, s3_client, unit):
-        self.s3_client = s3_client
-        self.unit = unit
+    def __init__(self, args):
+        self.s3_client = boto3.client('s3')
+        # self.s3_client = s3_client
+        self.args = args
+        self.report = {}
+
 
     @staticmethod
     def _create_bucket_name(bucket_prefix):
@@ -30,55 +36,105 @@ class S3Inspect():
         list_buckets = self.s3_client.list_buckets()
         return  list_buckets['Buckets']
 
-    def _show_bucket_details(self, bucket_name, bucket_creationdate, \
-                    total_size, file_count):
-        print("Bucket Name: {}".format(bucket_name))
-        print("Bucket Creation Date: {}".format(bucket_creationdate))
-        self._print_total_size(total_size)
-        print("Total Files: {}".format(file_count))
-
-    def _print_total_size(self, total_size):
-        if self.unit == 'b':
-            print ('Total S3 Bucket Size = %.3f B' % (total_size))
-        elif self.unit == 'kb':
-            print ('Total S3 Bucket Size = %.3f KB' % (total_size/1024))
-        elif self.unit == 'mb':
-            print ('Total S3 Bucket Size = %.3f MB' % (total_size/1024/1024))
-        elif self.unit == 'gb':
-            print ('Total S3 Bucket Size = %.3f GB' % (total_size/1024/1024/1024))
+    def _show_bucket_details(self, args):
+        file_count = 0
+        total_size = 0
+        print("Bucket Name: {}".format(self.report['Name']))
+        print("Bucket Region: {}".format(self.report['BucketRegion']))
+        print("Bucket Creation Date: {}".format(self.report['CreationDate']))
+        print("Recent File Modification Date (Bucket): {}".format(
+                    self.report['RECENT_FILE_MODIFICATION_DATE']))
+        # print(self.report)
+        if args.groubystoragetype:
+            for storage_class in self.report['StorageClasses'].keys():
+                print ("Storage Class: {}".format(storage_class))
+                print("\tTotal Files: {}".format(self.report['StorageClasses'][storage_class]['File_Count']))
+                self._print_total_size(self.report['StorageClasses'][storage_class]['Total_Size'], indent="\t")
+                print("\tModification Date (storage type)".format(self.report['StorageClasses'][storage_class]['Modified_Date']))
         else:
-            print ("Warning: Unknown <unit> : {}".format(self.unit))
-            print ('Total S3 Bucket Size = %.3f B' % (total_size))
-    def _get_matching_s3_keys(self, bucket, prefix='', suffix=''):
+            for storage_class in self.report['StorageClasses'].keys():
+                file_count += self.report['StorageClasses'][storage_class]['File_Count']
+                total_size += self.report['StorageClasses'][storage_class]['Total_Size']
+
+            print("Total Files: {}".format(file_count))
+            self._print_total_size(total_size)
+
+
+    def _print_total_size(self, total_size, indent=""):
+        if self.args.unit == 'b':
+            print (indent + 'Total Files Size = %.3f B' % (total_size))
+        elif self.args.unit == 'kb':
+            print (indent + 'Total Files Size = %.3f KB' % (total_size/1024))
+        elif self.args.unit == 'mb':
+            print (indent + 'Total Files Size = %.3f MB' % (total_size/1024/1024))
+        elif self.args.unit == 'gb':
+            print (indent + 'Total Files Size = %.3f GB' % (total_size/1024/1024/1024))
+        else:
+            print (indent + "Warning: Unknown <unit> : {}".format(self.args.unit))
+            print (indent + 'Total Files Size = %.3f B' % (total_size))
+
+    def _get_bucket_location(self, Bucket):
+        return self.s3_client.get_bucket_location(Bucket=Bucket)['LocationConstraint']
+
+
+    def _get_matching_s3_keys(self, bucket, maxkeys=None, prefix=None ):
         """
         Generate the keys in an S3 bucket.
 
         :param bucket: Name of the S3 bucket.
+        :param maxkeys: Maximum Keys to fetch. Default = 1000
         :param prefix: Only fetch keys that start with this prefix (optional).
-        :param suffix: Only fetch keys that end with this suffix (optional).
         """
-        
+
         # s3 = boto3.client('s3')
+
         s3 = self.s3_client
         kwargs = {'Bucket': bucket}
+        get_last_modified = lambda obj: int(obj['LastModified'].strftime('%s'))
+        # tzlocal = tz.tzoffset('utc',0)
+        recent_date = datetime(1970,1,1,tzinfo=tzutc())
+        self.report.setdefault('StorageClasses',{})
+        #
 
         # If the prefix is a single string (not a tuple of strings), we can
         # do the filtering directly in the S3 API.
         if isinstance(prefix, str):
             kwargs['Prefix'] = prefix
 
+        if isinstance(maxkeys, int):
+            kwargs['MaxKeys'] = maxkeys
+
         while True:
 
             # The S3 API response is a large blob of metadata.
             # 'Contents' contains information about the listed objects.
             resp = s3.list_objects_v2(**kwargs)
-            for obj in resp['Contents']:
-                # print (obj)
-                key = obj['Key']
-                size = obj['Size']
-                storage_class = obj['StorageClass']
-                if key.startswith(prefix) and key.endswith(suffix):
-                    yield key, size, storage_class
+            if resp['KeyCount'] >= 1:
+                contents = sorted(resp['Contents'], key=get_last_modified, reverse=True)
+                last_modified_date = contents[0]['LastModified']
+
+                if recent_date < last_modified_date:
+                    recent_date = last_modified_date
+
+                for obj in contents:
+                    # print (obj)
+                    key = obj['Key']
+                    size = obj['Size']
+                    storage_class = obj['StorageClass']
+                    self.report['StorageClasses'].setdefault(storage_class, {'Total_Size':0, 'File_Count':0, 'Modified_Date':None})
+
+
+                    modified_date_sc = obj['LastModified']
+                    if self.report['StorageClasses'][storage_class]['Modified_Date'] is None or \
+                                self.report['StorageClasses'][storage_class]['Modified_Date'] < modified_date_sc:
+                        self.report['StorageClasses'][storage_class]['Modified_Date'] = modified_date_sc
+
+                    if key.startswith(prefix):
+                        # print (key, size, storage_class, modified_date)
+                        # print(obj)
+                        yield key, size, storage_class
+            else:
+                raise Exception("No Keys found matching S3 Bucket filter... Exiting")
 
             # The S3 API is paginated, returning up to 1000 keys at a time.
             # Pass the continuation token into the next response, until we
@@ -86,4 +142,6 @@ class S3Inspect():
             try:
                 kwargs['ContinuationToken'] = resp['NextContinuationToken']
             except KeyError:
-                break
+                # print("recent_date: {}".format(recent_date))
+                self.report['RECENT_FILE_MODIFICATION_DATE'] =  recent_date
+                return
