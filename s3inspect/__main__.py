@@ -32,7 +32,7 @@ from s3inspect import S3Inspect
 import argparse
 import boto3
 
-parser = argparse.ArgumentParser(description='Process some integers.')
+parser = argparse.ArgumentParser(description='Inspect S3 Bucket')
 
 # parser.add_argument('-t', '--top', type=int,
 #                    default=10,
@@ -64,17 +64,10 @@ s3_client = boto3.client('s3')
 
 s = S3Inspect(s3_client, args.unit)
 total_size = 0
-print("List of Matching keys in the selected bucket: {}".format(args.bucket_name))
-for key, size, storage_class in s._get_matching_s3_keys(bucket=args.bucket_name, prefix=args.prefix, suffix=args.suffix):
-    print(key, size, storage_class)
-    total_size += size
-
-s._print_total_size(total_size)
-
+file_count = 0
 
 
 bucket_list = s._list_buckets()
-
 
 if args.list:
     print("------------------------------------------------------------------")
@@ -82,28 +75,35 @@ if args.list:
     print("Bucket Name\t\t\t|\t\t CreationDate")
     for bucket in bucket_list:
         print("{}\t\t\t|\t\t\t {}".format(bucket['Name'], bucket['CreationDate']))
+else:
+    bucket_found = False
 
+    for buckets in bucket_list:
+        if args.bucket_name == buckets['Name']:
+            bucket_found = True
+            # print("List of Matching keys in the selected bucket: {}".format(args.bucket_name))
+            try:
+                for key, size, storage_class in s._get_matching_s3_keys(bucket=args.bucket_name, prefix=args.prefix, suffix=args.suffix):
+                    # print(key, size, storage_class)
+                    total_size += size
+                    file_count += 1
+            except Exception as e:
+                print ("Failed to fetch keys in S3 Bucket Requested: {}".format(args.bucket_name))
+                raise e
 
-print("------------------------------------------------------------------")
-print("S3 Bucket Inspection Report:")
-print("------------------------------------------------------------------")
-for buckets in bucket_list:
-    if args.bucket_name == buckets['Name']:
-        s._show_bucket_details(buckets['Name'], buckets['CreationDate'])
-        break
-
-
-        # raise
-
-
-
-# print()
-
-
-# #buckets = s._read_s3_buckets(s3_connection=s3_client)
-# #print ("Printing List of buckets")
-# #for bucket in buckets:
-#     print ("Bucket Name: {}".format(bucket.name))
-#     files = s._read_files(bucket=bucket, s3_connection=s3_client)
-#     for file in files:
-#         print(file)
+            break
+    if bucket_found:
+        print("------------------------------------------------------------------")
+        print("S3 Bucket Inspection Report:")
+        print("------------------------------------------------------------------")
+        s._show_bucket_details(buckets['Name'], buckets['CreationDate'], \
+                        total_size, file_count)
+        print("------------------------------------------------------------------")
+    else:
+        print("------------------------------------------------------------------")
+        print("No Matching Buckets found with name: {}. \
+                \nPlease choose from the available bucket list. Using: \
+                \n\t-l or --list option Or \
+                \n\t-h or --help for more options \
+                ".format(args.bucket_name))
+        print("------------------------------------------------------------------")

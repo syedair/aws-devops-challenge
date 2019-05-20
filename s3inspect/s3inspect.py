@@ -30,22 +30,25 @@ class S3Inspect():
         list_buckets = self.s3_client.list_buckets()
         return  list_buckets['Buckets']
 
-    def _show_bucket_details(self, bucket_name, bucket_creationdate):
+    def _show_bucket_details(self, bucket_name, bucket_creationdate, \
+                    total_size, file_count):
         print("Bucket Name: {}".format(bucket_name))
         print("Bucket Creation Date: {}".format(bucket_creationdate))
+        self._print_total_size(total_size)
+        print("Total Files: {}".format(file_count))
 
     def _print_total_size(self, total_size):
         if self.unit == 'b':
-            print ('s3 size = %.3f B' % (total_size))
+            print ('Total S3 Bucket Size = %.3f B' % (total_size))
         elif self.unit == 'kb':
-            print ('s3 size = %.3f KB' % (total_size/1024))
+            print ('Total S3 Bucket Size = %.3f KB' % (total_size/1024))
         elif self.unit == 'mb':
-            print ('s3 size = %.3f MB' % (total_size/1024/1024))
+            print ('Total S3 Bucket Size = %.3f MB' % (total_size/1024/1024))
         elif self.unit == 'gb':
-            print ('s3 size = %.3f GB' % (total_size/1024/1024/1024))
+            print ('Total S3 Bucket Size = %.3f GB' % (total_size/1024/1024/1024))
         else:
             print ("Warning: Unknown <unit> : {}".format(self.unit))
-            print ('s3 size = %.3f B' % (total_size))
+            print ('Total S3 Bucket Size = %.3f B' % (total_size))
     def _get_matching_s3_keys(self, bucket, prefix='', suffix=''):
         """
         Generate the keys in an S3 bucket.
@@ -54,6 +57,7 @@ class S3Inspect():
         :param prefix: Only fetch keys that start with this prefix (optional).
         :param suffix: Only fetch keys that end with this suffix (optional).
         """
+        
         # s3 = boto3.client('s3')
         s3 = self.s3_client
         kwargs = {'Bucket': bucket}
