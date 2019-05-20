@@ -42,7 +42,19 @@ parser.add_argument('-u', '--unit', type=str,
                    help='Return files sizes in these units: b (bytes), \
                         kb (kilobytes), mb (megabytes), gb (gigabytes)'
                     )
-
+parser.add_argument('-p', '--prefix', type=str,
+                   default='',
+                   help='Add prefix for the keys. Example: \
+                        images/'
+                    )
+parser.add_argument('-s', '--suffix', type=str,
+                   default='',
+                   help='Add suffix for the keys. Example: \
+                        .jpg'
+                    )
+parser.add_argument('-l', '--list', action='store_true',
+                   help='Displays a list of available S3 Buckets in account'
+                    )
 parser.add_argument('bucket_name', type=str,
                    help='Name of the bucket to inspect')
 
@@ -51,19 +63,32 @@ args = parser.parse_args()
 s3_client = boto3.client('s3')
 
 s = S3Inspect(s3_client, args.unit)
+total_size = 0
+print("List of Matching keys in the selected bucket: {}".format(args.bucket_name))
+for key, size, storage_class in s._get_matching_s3_keys(bucket=args.bucket_name, prefix=args.prefix, suffix=args.suffix):
+    print(key, size, storage_class)
+    total_size += size
 
-print(s3_client.list_objects_v2(Bucket=args.bucket_name).)
+s._print_total_size(total_size)
 
-print("List of All buckets in account")
+
+
 bucket_list = s._list_buckets()
-print(bucket_list)
 
-print("1. Running Inspection on the selected bucket: {}".format(args.bucket_name))
 
-print("2. Checking if {} exists".format(args.bucket_name))
+if args.list:
+    print("------------------------------------------------------------------")
+    print("List of All buckets in account")
+    print("Bucket Name\t\t\t|\t\t CreationDate")
+    for bucket in bucket_list:
+        print("{}\t\t\t|\t\t\t {}".format(bucket['Name'], bucket['CreationDate']))
+
+
+print("------------------------------------------------------------------")
+print("S3 Bucket Inspection Report:")
+print("------------------------------------------------------------------")
 for buckets in bucket_list:
     if args.bucket_name == buckets['Name']:
-        print("{} found...".format(args.bucket_name))
         s._show_bucket_details(buckets['Name'], buckets['CreationDate'])
         break
 
