@@ -18,7 +18,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='S3-Inspect',
-    version='0.1',
+    version='1.1',
     description='A package to inspect contents of S3 buckets and generate report',
     author='Syed Humair',
     author_email="syed.humair@gmail.com",
