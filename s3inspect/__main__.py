@@ -68,6 +68,15 @@ def main():
                        help='When this is set cost report is returned\
                        Type'
                         )
+    parser.add_argument('--timeperiod', type=str,
+                        help="Example: '{\"Start\":\"2019-01-01\",\"End\":\"2019-05-20\"}'"
+                        )
+    parser.add_argument('--granularity', type=str,
+                        help="Example: MONTHLY"
+                        )
+    parser.add_argument('--metrics', type=str,
+                        help="Example: 'BlendedCost UNBLENDED_COST AMORTIZED_COST'"
+                        )
     # parser.add_argument('-s', '--suffix', type=str,
     #                    default='',
     #                    help='Add suffix for the keys. Example: \
@@ -99,7 +108,11 @@ def main():
         for bucket in bucket_list:
             print("{}\t\t\t|\t\t\t {}".format(bucket['Name'], bucket['CreationDate']))
     elif args.getcost:
+        args.timeperiod=json.loads(args.timeperiod)
+        args.metrics = args.metrics.split()
+
         cost_report = s._get_cost_and_usage(args)
+
         print(cost_report)
     elif args.regex is not None:
         # r = re.compile(args.regex)

@@ -33,10 +33,7 @@ class S3Inspect():
 
     def _get_cost_and_usage(self, args):
         client = boto3.client('ce')
-        response = client.get_cost_and_usage(TimePeriod={
-        'Start': '2019-01-01',
-        'End': '2019-05-20'
-        },Granularity='MONTHLY', Metrics=['BlendedCost'])
+        response = client.get_cost_and_usage(TimePeriod=args.timeperiod,Granularity=args.granularity, Metrics=args.metrics)
         return response
     # def _read_s3_buckets(self, s3_connection):
     #     return s3_connection.buckets.all()
