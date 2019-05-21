@@ -38,9 +38,7 @@ def main():
     # import pdb;pdb.set_trace()
     parser = argparse.ArgumentParser(description='Inspect S3 Bucket')
 
-    # parser.add_argument('-t', '--top', type=int,
-    #                    default=10,
-    #                    help='Top n files to return in the output')
+
     parser.add_argument('-u', '--unit', type=str,
                        default='mb', choices=['b','kb','mb','gb'],
                        help='Return files sizes in these units: b (bytes), \
@@ -148,8 +146,10 @@ def main():
 
                     except Exception as e:
                         print ("Failed to fetch keys in S3 Bucket Regex Requested: {}".format(args.regex))
+                        print (e)
                 except Exception as e:
                     print ("WARNING: Cannot read bucket: {}...Continuing".format(buckets['Name']))
+                    print (e)
 
             s._show_bucket_details(args)
 

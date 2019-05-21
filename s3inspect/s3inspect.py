@@ -45,64 +45,67 @@ class S3Inspect():
     def _show_bucket_details(self, args):
         file_count = 0
         total_size = 0
+        try:
 
-        print("------------------------------------------------------------------")
-        print("S3 Bucket Inspection Report:")
-        if args.groubyregion:
-            for bucket_region in self.report['Regions'].keys():
-                print("------------------------------------------------------------------")
-                print("Bucket Region: {}".format(bucket_region))
-                print("------------------------------------------------------------------")
-                for bucket in self.report['Regions'][bucket_region]['Buckets'].keys():
-                    print("\t------------------------------------------------------------------")
-                    print("\tBucket Name: {}".format(bucket))
-                    print("\t------------------------------------------------------------------")
-                    print("\tBucket Creation Date: {}".format(self.report['Regions'][bucket_region]['Buckets'][bucket]['CreationDate']))
-                    print("\tRecent File Modification Date (Bucket): {}".format(
-                                self.report['Regions'][bucket_region]['Buckets'][bucket]['RECENT_FILE_MODIFICATION_DATE']))
-                    if args.groubystoragetype:
-                        for storage_class in self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'].keys():
-                            print("\t\t------------------------------------------------------------------")
-                            print ("\t\tStorage Class: {}".format(storage_class))
-                            print("\t\t------------------------------------------------------------------")
-                            print("\t\tTotal Files: {}".format(self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['File_Count']))
-                            self._print_total_size(self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['Total_Size'], indent="\t\t")
-                            print("\t\tModification Date (storage type): {}".format(self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['Modified_Date']))
-
-                    else:
-                        file_count = 0
-                        total_size = 0
-                        for storage_class in self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'].keys():
-                            file_count += self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['File_Count']
-                            total_size += self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['Total_Size']
-                        print("\tTotal Files: {}".format(file_count))
-                        self._print_total_size(total_size, indent="\t")
-        else:
-            for bucket_region in self.report['Regions'].keys():
-                for bucket in self.report['Regions'][bucket_region]['Buckets'].keys():
+            print("------------------------------------------------------------------")
+            print("S3 Bucket Inspection Report:")
+            if args.groubyregion:
+                for bucket_region in self.report['Regions'].keys():
                     print("------------------------------------------------------------------")
-                    print("Bucket Name: {}".format(bucket))
+                    print("Bucket Region: {}".format(bucket_region))
                     print("------------------------------------------------------------------")
-                    print("Bucket Creation Date: {}".format(self.report['Regions'][bucket_region]['Buckets'][bucket]['CreationDate']))
-                    print("Recent File Modification Date (Bucket): {}".format(
-                                self.report['Regions'][bucket_region]['Buckets'][bucket]['RECENT_FILE_MODIFICATION_DATE']))
-                    if args.groubystoragetype:
-                        for storage_class in self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'].keys():
-                            print("\t------------------------------------------------------------------")
-                            print ("\tStorage Class: {}".format(storage_class))
-                            print("\t------------------------------------------------------------------")
-                            print("\tTotal Files: {}".format(self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['File_Count']))
-                            self._print_total_size(self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['Total_Size'], indent="\t")
-                            print("\tModification Date (storage type): {}".format(self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['Modified_Date']))
+                    for bucket in self.report['Regions'][bucket_region]['Buckets'].keys():
+                        print("\t------------------------------------------------------------------")
+                        print("\tBucket Name: {}".format(bucket))
+                        print("\t------------------------------------------------------------------")
+                        print("\tBucket Creation Date: {}".format(self.report['Regions'][bucket_region]['Buckets'][bucket]['CreationDate']))
+                        print("\tRecent File Modification Date (Bucket): {}".format(
+                                    self.report['Regions'][bucket_region]['Buckets'][bucket]['RECENT_FILE_MODIFICATION_DATE']))
+                        if args.groubystoragetype:
+                            for storage_class in self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'].keys():
+                                print("\t\t------------------------------------------------------------------")
+                                print ("\t\tStorage Class: {}".format(storage_class))
+                                print("\t\t------------------------------------------------------------------")
+                                print("\t\tTotal Files: {}".format(self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['File_Count']))
+                                self._print_total_size(self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['Total_Size'], indent="\t\t")
+                                print("\t\tModification Date (storage type): {}".format(self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['Modified_Date']))
 
-                    else:
-                        file_count = 0
-                        total_size = 0
-                        for storage_class in self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'].keys():
-                            file_count += self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['File_Count']
-                            total_size += self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['Total_Size']
-                        print("Total Files: {}".format(file_count))
-                        self._print_total_size(total_size, indent="")
+                        else:
+                            file_count = 0
+                            total_size = 0
+                            for storage_class in self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'].keys():
+                                file_count += self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['File_Count']
+                                total_size += self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['Total_Size']
+                            print("\tTotal Files: {}".format(file_count))
+                            self._print_total_size(total_size, indent="\t")
+            else:
+                for bucket_region in self.report['Regions'].keys():
+                    for bucket in self.report['Regions'][bucket_region]['Buckets'].keys():
+                        print("------------------------------------------------------------------")
+                        print("Bucket Name: {}".format(bucket))
+                        print("------------------------------------------------------------------")
+                        print("Bucket Creation Date: {}".format(self.report['Regions'][bucket_region]['Buckets'][bucket]['CreationDate']))
+                        print("Recent File Modification Date (Bucket): {}".format(
+                                    self.report['Regions'][bucket_region]['Buckets'][bucket]['RECENT_FILE_MODIFICATION_DATE']))
+                        if args.groubystoragetype:
+                            for storage_class in self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'].keys():
+                                print("\t------------------------------------------------------------------")
+                                print ("\tStorage Class: {}".format(storage_class))
+                                print("\t------------------------------------------------------------------")
+                                print("\tTotal Files: {}".format(self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['File_Count']))
+                                self._print_total_size(self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['Total_Size'], indent="\t")
+                                print("\tModification Date (storage type): {}".format(self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['Modified_Date']))
+
+                        else:
+                            file_count = 0
+                            total_size = 0
+                            for storage_class in self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'].keys():
+                                file_count += self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['File_Count']
+                                total_size += self.report['Regions'][bucket_region]['Buckets'][bucket]['StorageClasses'][storage_class]['Total_Size']
+                            print("Total Files: {}".format(file_count))
+                            self._print_total_size(total_size, indent="")
+        except Exception as e:
+            print ("Exception {} Occured while creating Report.. ".format(e))
 
 
 
