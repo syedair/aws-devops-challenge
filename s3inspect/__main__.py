@@ -28,12 +28,14 @@
 
 """
 import sys
+import json
 from s3inspect import S3Inspect
 import argparse
 import boto3
 import datetime
 import re
 def main():
+    # import pdb;pdb.set_trace()
     parser = argparse.ArgumentParser(description='Inspect S3 Bucket')
 
     # parser.add_argument('-t', '--top', type=int,
@@ -53,8 +55,17 @@ def main():
                        help='Add prefix for the keys. Example: \
                             images/'
                         )
-    parser.add_argument('-g', '--groubystoragetype', action='store_true',
+    parser.add_argument('-gs', '--groubystoragetype', action='store_true',
                        help='When this is set information is grouped by Storage\
+                       Type'
+                        )
+    parser.add_argument('-gr', '--groubyregion', action='store_true',
+                       help='When this is set information is grouped by Region\
+                       Type'
+                        )
+
+    parser.add_argument('-gc', '--getcost', action='store_true',
+                       help='When this is set cost report is returned\
                        Type'
                         )
     # parser.add_argument('-s', '--suffix', type=str,
@@ -87,52 +98,47 @@ def main():
         print("Bucket Name\t\t\t|\t\t CreationDate")
         for bucket in bucket_list:
             print("{}\t\t\t|\t\t\t {}".format(bucket['Name'], bucket['CreationDate']))
+    elif args.getcost:
+        cost_report = s._get_cost_and_usage(args)
+        print(cost_report)
     elif args.regex is not None:
         # r = re.compile(args.regex)
         for buckets in bucket_list:
             if re.match(args.regex, buckets['Name']):
                 filtered_bucket_list.append({'Name':buckets['Name'], 'CreationDate': buckets['CreationDate']})
                 bucket_found = True
-
-
-
-
-    # else:
-
         if bucket_found:
-            print("------------------------------------------------------------------")
-            print("S3 Bucket Inspection Report:")
-            print("------------------------------------------------------------------")
             for buckets in filtered_bucket_list:
-                # if args.bucket_name in buckets['Name']:
-                # print("List of Matching keys in the selected bucket: {}".format(args.bucket_name))
-                bucket_region = s._get_bucket_location(Bucket=buckets['Name'])
-                s.report={}
                 try:
-                    for key, size, storage_class in \
-                            s._get_matching_s3_keys(
-                                    bucket=buckets['Name'],
-                                        # maxkeys=2,
-                                        prefix=args.prefix):
-                        # print(key, size, storage_class)
-                        # s.report.setdefault('StorageClasses',{})
-                        # print(s.report)
+                    bucket_region = s._get_bucket_location(Bucket=buckets['Name'])
+                    s.report['Regions'].setdefault(bucket_region,{})
+                    s.report['Regions'][bucket_region].setdefault('Buckets', {})
+                    s.report['Regions'][bucket_region]['Buckets'].setdefault(buckets['Name'], {})
+                    s.report['Regions'][bucket_region]['Buckets'][buckets['Name']].setdefault('CreationDate', buckets['CreationDate'])
+                    total_size = 0
+                    file_count = 0
+                    try:
+                        for key, size, storage_class in \
+                                s._get_matching_s3_keys(
+                                        bucket=buckets['Name'],
+                                        bucket_region=bucket_region,
+                                            # maxkeys=2,
+                                            prefix=args.prefix):
 
-                        s.report['StorageClasses'][storage_class]['Total_Size'] += size
-                        s.report['StorageClasses'].setdefault(storage_class, {})
-                        s.report['StorageClasses'][storage_class]['File_Count'] += 1
-                        s.report['BucketRegion'] = bucket_region
-                    # print(s.report)
-                    s.report['Name'] = buckets['Name']
-                    s.report['CreationDate'] = buckets['CreationDate']
-                    s._show_bucket_details(args)
-                    print("------------------------------------------------------------------")
+                            total_size += size
+                            file_count += 1
+                            s.report['Regions'][bucket_region]['Buckets'][buckets['Name']]['StorageClasses'][storage_class].setdefault('Total_Size', total_size)
+                            s.report['Regions'][bucket_region]['Buckets'][buckets['Name']]['StorageClasses'][storage_class].setdefault('File_Count', file_count)
+                        s.report['Regions'][bucket_region]['Buckets'][buckets['Name']]['StorageClasses'][storage_class]['Total_Size'] = total_size
+                        s.report['Regions'][bucket_region]['Buckets'][buckets['Name']]['StorageClasses'][storage_class]['File_Count'] = file_count
+
+
+                    except Exception as e:
+                        print ("Failed to fetch keys in S3 Bucket Regex Requested: {}".format(args.regex))
                 except Exception as e:
-                    print ("Failed to fetch keys in S3 Bucket Regex Requested: {}".format(args.regex))
-                    # raise e
+                    print ("WARNING: Cannot read bucket: {}...Continuing".format(buckets['Name']))
 
-                # break
-        # if bucket_found:
+            s._show_bucket_details(args)
 
         else:
             print("------------------------------------------------------------------")
